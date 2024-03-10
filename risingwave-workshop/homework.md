@@ -85,37 +85,39 @@ Options:
 
 p.s. The trip time between taxi zones does not take symmetricity into account, i.e. `A -> B` and `B -> A` are considered different trips. This applies to subsequent questions as well.
 
+```
 CREATE MATERIALIZED VIEW between_zones AS
 WITH t AS (
 SELECT
-pickup_zone.zone AS pickup_zone,
-dropoff_zone.zone AS dropoff_zone,
-t.pulocationid,
-t.dolocationid,
-t.tpep_pickup_datetime,
-t.tpep_dropoff_datetime,
-t.tpep_dropoff_datetime - t.tpep_pickup_datetime AS trip_time
+    pickup_zone.zone AS pickup_zone,
+    dropoff_zone.zone AS dropoff_zone,
+    t.pulocationid,
+    t.dolocationid,
+    t.tpep_pickup_datetime,
+    t.tpep_dropoff_datetime,
+    t.tpep_dropoff_datetime - t.tpep_pickup_datetime AS trip_time
 FROM
-trip_data AS t
+    trip_data AS t
 JOIN
-taxi_zone AS pickup_zone ON t.pulocationid = pickup_zone.location_id
+    taxi_zone AS pickup_zone ON t.pulocationid = pickup_zone.location_id
 JOIN
-taxi_zone AS dropoff_zone ON t.dolocationid = dropoff_zone.location_id
+    taxi_zone AS dropoff_zone ON t.dolocationid = dropoff_zone.location_id
 )
 SELECT
-pickup_zone,
-dropoff_zone,
-COUNT (\*) AS num_trips,
-min(trip_time) AS min_trip_time,
-max(trip_time) AS max_trip_time,
-avg(trip_time) AS avg_trip_time
+    pickup_zone,
+    dropoff_zone,
+    COUNT (*) AS num_trips,
+    min(trip_time) AS min_trip_time,
+    max(trip_time) AS max_trip_time,
+    avg(trip_time) AS avg_trip_time
 FROM
-t
+    t
 GROUP BY
-pickup_zone, dropoff_zone;
+    pickup_zone, dropoff_zone;
 
-SELECT \* FROM between_zones
+SELECT * FROM between_zones
 ORDER BY avg_trip_time DESC;
+```
 
 ## Question 2
 
@@ -146,25 +148,27 @@ Options:
 3. Midtown Center, Upper East Side South, Upper East Side North
 4. LaGuardia Airport, Midtown Center, Upper East Side North
 
+```
 CREATE MATERIALIZED VIEW busy_zones AS
 WITH t AS (
 SELECT
-pickup_zone.zone AS pickup_zone,
-t.pulocationid,
-t.dolocationid,
-t.tpep_pickup_datetime,
-t.tpep_dropoff_datetime
+    pickup_zone.zone AS pickup_zone,
+    t.pulocationid,
+    t.dolocationid,
+    t.tpep_pickup_datetime,
+    t.tpep_dropoff_datetime
 FROM
-trip_data AS t
+    trip_data AS t
 JOIN
-taxi_zone AS pickup_zone ON t.pulocationid = pickup_zone.location_id
+    taxi_zone AS pickup_zone ON t.pulocationid = pickup_zone.location_id
 WHERE
-t.tpep_pickup_datetime > (SELECT max(tpep_pickup_datetime) - interval '17 hours' FROM trip_data)
+    t.tpep_pickup_datetime > (SELECT max(tpep_pickup_datetime) - interval '17 hours' FROM trip_data)
 )
 SELECT
-pickup_zone,
-COUNT(\*) AS num_trips
+    pickup_zone,
+    COUNT(*) AS num_trips
 FROM
-t
+    t
 GROUP BY
-pickup_zone;
+    pickup_zone;
+```
