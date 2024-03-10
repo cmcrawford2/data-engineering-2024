@@ -5,6 +5,7 @@
 In order to get a static set of results, we will use historical data from the dataset.
 
 Run the following commands:
+
 ```bash
 # Load the cluster op commands.
 source commands.sh
@@ -63,6 +64,7 @@ Create a materialized view to compute the average, min and max trip time **betwe
 
 Note that we consider the do not consider `a->b` and `b->a` as the same trip pair.
 So as an example, you would consider the following trip pairs as different pairs:
+
 ```plaintext
 Yorkville East -> Steinway
 Steinway -> Yorkville East
@@ -75,6 +77,7 @@ Bonus (no marks): Create an MV which can identify anomalies in the data. For exa
 but the max trip time is 10 minutes and 20 minutes respectively.
 
 Options:
+
 1. Yorkville East, Steinway
 2. Murray Hill, Midwood
 3. East Flatbush/Farragut, East Harlem North
@@ -82,11 +85,44 @@ Options:
 
 p.s. The trip time between taxi zones does not take symmetricity into account, i.e. `A -> B` and `B -> A` are considered different trips. This applies to subsequent questions as well.
 
+CREATE MATERIALIZED VIEW between_zones AS
+WITH t AS (
+SELECT
+pickup_zone.zone AS pickup_zone,
+dropoff_zone.zone AS dropoff_zone,
+t.pulocationid,
+t.dolocationid,
+t.tpep_pickup_datetime,
+t.tpep_dropoff_datetime,
+t.tpep_dropoff_datetime - t.tpep_pickup_datetime AS trip_time
+FROM
+trip_data AS t
+JOIN
+taxi_zone AS pickup_zone ON t.pulocationid = pickup_zone.location_id
+JOIN
+taxi_zone AS dropoff_zone ON t.dolocationid = dropoff_zone.location_id
+)
+SELECT
+pickup_zone,
+dropoff_zone,
+COUNT (\*) AS num_trips,
+min(trip_time) AS min_trip_time,
+max(trip_time) AS max_trip_time,
+avg(trip_time) AS avg_trip_time
+FROM
+t
+GROUP BY
+pickup_zone, dropoff_zone;
+
+SELECT \* FROM between_zones
+ORDER BY avg_trip_time DESC;
+
 ## Question 2
 
 Recreate the MV(s) in question 1, to also find the **number of trips** for the pair of taxi zones with the highest average trip time.
 
 Options:
+
 1. 5
 2. 3
 3. 10
@@ -104,7 +140,31 @@ to create a filter condition based on the latest pickup time.
 NOTE: For this question `17 hours` was picked to ensure we have enough data to work with.
 
 Options:
+
 1. Clinton East, Upper East Side North, Penn Station
 2. LaGuardia Airport, Lincoln Square East, JFK Airport
 3. Midtown Center, Upper East Side South, Upper East Side North
 4. LaGuardia Airport, Midtown Center, Upper East Side North
+
+CREATE MATERIALIZED VIEW busy_zones AS
+WITH t AS (
+SELECT
+pickup_zone.zone AS pickup_zone,
+t.pulocationid,
+t.dolocationid,
+t.tpep_pickup_datetime,
+t.tpep_dropoff_datetime
+FROM
+trip_data AS t
+JOIN
+taxi_zone AS pickup_zone ON t.pulocationid = pickup_zone.location_id
+WHERE
+t.tpep_pickup_datetime > (SELECT max(tpep_pickup_datetime) - interval '17 hours' FROM trip_data)
+)
+SELECT
+pickup_zone,
+COUNT(\*) AS num_trips
+FROM
+t
+GROUP BY
+pickup_zone;
